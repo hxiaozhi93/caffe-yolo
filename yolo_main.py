@@ -2,6 +2,7 @@ import caffe
 import numpy as np
 import sys, getopt
 import cv2
+import skimage
 
 def interpret_output(output, img_width, img_height):
 	classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train","tvmonitor"]
@@ -102,7 +103,7 @@ def show_results(img,results, img_width, img_height):
 			cv2.putText(img_cp,results[i][0] + ' : %.2f' % results[i][5],(xmin+5,ymin-7),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,0,0),1)	
 	if imshow :
 		cv2.imshow('YOLO detection',img_cp)
-		cv2.waitKey(1000)
+		cv2.waitKey(1)
 
 
 
@@ -135,12 +136,24 @@ def main(argv):
 	transformer = caffe.io.Transformer({'data': net.blobs['data'].data.shape})
 	transformer.set_transpose('data', (2,0,1))
 	transformer.set_channel_swap('data', (2,1,0))
-	out = net.forward_all(data=np.asarray([transformer.preprocess('data', inputs)]))
-	print out.iteritems()
-	img_cv = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-	results = interpret_output(out['result'][0], img.shape[1], img.shape[0]) # fc27 instead of fc12 for yolo_small 
-	show_results(img_cv,results, img.shape[1], img.shape[0])
-	cv2.waitKey(10000)
+	cap = cv2.VideoCapture(0)
+	
+	while 1:
+		ret, frame = cap.read()
+		img_cv = frame		
+		img = frame
+		frame = skimage.img_as_float(frame.astype(np.uint8))
+		inputs = frame
+		out = net.forward_all(data=np.asarray([transformer.preprocess('data', inputs)]))
+		print out.iteritems()
+		#img_cv = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+		#img_cv = frame
+		results = interpret_output(out['result'][0], img.shape[1], img.shape[0]) # fc27 instead of fc12 for yolo_small 
+		show_results(img_cv,results, img.shape[1], img.shape[0])
+		key = cv2.waitKey(5)
+		c = chr(key & 255)
+		if c in ['q', 'Q', chr(27)]:
+			break
 
 
 
